@@ -1,0 +1,61 @@
+---
+- name: Baseline configuration for lab servers
+  hosts: servers
+  become: true
+  tasks:
+    - name: Install baseline packages
+      ansible.builtin.apt:
+        name:
+          - htop
+          - curl
+          - net-tools
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Ensure groups exist
+      ansible.builtin.group:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - helpdesk
+        - webadmins
+
+    - name: Ensure lab users exist in the right groups
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        comment: "{{ item.comment }}"
+        groups: "{{ item.group }}"
+        append: true
+        shell: /bin/bash
+        create_home: true
+      loop:
+        - { name: mlopez, comment: "Maria Lopez", group: helpdesk }
+        - { name: jsmith, comment: "James Smith", group: webadmins }
+
+    - name: Apply SSH hardening drop-in
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/01-hardening.conf
+        content: |
+          PasswordAuthentication no
+          PermitRootLogin no
+          MaxAuthTries 3
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart ssh
+
+    - name: Help desk sudo rule
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/helpdesk
+        content: "%helpdesk ALL=(root) /usr/bin/systemctl is-active ssh, /usr/bin/systemctl restart ssh\n"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+
+  handlers:
+    - name: Restart ssh
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
