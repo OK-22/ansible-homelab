@@ -14,8 +14,13 @@ An Ansible playbook that configures two Ubuntu Server 24.04 lab servers the same
 - ansible.cfg: points Ansible at the inventory
 
 ## Run it
-ansible-playbook baseline.yml --check --diff -K   (dry run)
-ansible-playbook baseline.yml -K                  (apply)
+Dry run:
+
+    ansible-playbook baseline.yml --check --diff -K
+
+Apply:
+
+    ansible-playbook baseline.yml -K
 
 ## Results
 | Run | ksserver | ksserver2 | What happened |
